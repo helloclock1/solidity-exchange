@@ -24,8 +24,8 @@ contract Exchange{
     
     constructor(){
         current_coin = 1;
-        DodgeCoin = iDodgeCoin(0x358AA13c52544ECCEF6B0ADD0f801012ADAD5eE3);
-        BeatCoin = iBeatCoin(0x9D7f74d0C41E726EC95884E0e97Fa6129e3b5E99);
+        DodgeCoin = iDodgeCoin(0xd9145CCE52D386f254917e481eB44e9943F39138);
+        BeatCoin = iBeatCoin(0xd8b934580fcE35a11B58C6D73aDeE468a2833fa8);
         owner = msg.sender;
     }
 
@@ -54,7 +54,14 @@ contract Exchange{
         current_coin = 2;
     }
 
-    function DC_Transfer(address adr, uint tokens) public{
+    function offerInfo(address adr) public view returns(uint8[4] memory){
+        // возвращает данные оффера, где [id входящего токена, id исходящего токена, количество входящих токенов, количество исходящих токенов]
+        // может не лучший вариант, но в пол 3 ночи лучшего способа на ум не пришло
+        // позже нужно будет улучшить
+        return OfferInterface(adr).getInfo();
+    }
+
+    function DC_Transfer(address adr, uint tokens) internal{
         DodgeCoin.transferTo(msg.sender, adr, tokens);
     }
 
@@ -74,7 +81,7 @@ contract Exchange{
         return BeatCoin.balanceOf(adr);
     }
 
-    function getBalanceByToken(address adr, uint8 token)internal returns(uint256){
+    function getBalanceByToken(address adr, uint8 token)internal view returns(uint256){
         if (token == 1){
             return DC_BalanceOf(adr);
         }
