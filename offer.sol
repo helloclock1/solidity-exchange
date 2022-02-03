@@ -29,4 +29,19 @@ contract Offer{
     function setAmountOut(uint8 _amountOut)public onlyOwner{
         amountOut = _amountOut;
     }
+
+    function getInfo() public view returns(uint8[4] memory){
+        return [tokenIn, tokenOut, amountIn, amountOut];
+    }
+
+}
+
+    interface OfferInterface{
+    
+    function setAmountIn(uint8 _amountIn) external;
+
+    function setAmountOut(uint8 _amountOut) external;
+
+    function getInfo() external view returns(uint8[4] memory);
+
 }
