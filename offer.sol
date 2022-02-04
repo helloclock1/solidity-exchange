@@ -9,9 +9,6 @@ contract Offer{
     uint8 amountOut; // сколько владелец готов отдать за токены
     bool isAvailable;
     
-    // ВНИМАНИЕ
-    // ВРЕМЕННО убран модификатор onlyOwner на функциях setAmountIn и setAmountOut
-    // Нужно найти способ получать адрес человека, а не контракта биржи в msg.sender!
     constructor(address _owner, uint8 _tokenIn, uint8 _tokenOut,uint8 _amountIn, uint8 _amountOut){
         owner = _owner;
         tokenIn = _tokenIn;
@@ -21,21 +18,19 @@ contract Offer{
         isAvailable = true;
     }
 
-    modifier onlyOwner(){
-        require(msg.sender == owner, "Nigger alarm");
-        _;
-    }
 
     modifier onlyAvailable(){
         require(isAvailable == true, "Outdated offer");
         _;
     }
 
-    function setAmountIn(uint8 _amountIn)public onlyAvailable{
+    function setAmountIn(address sender, uint8 _amountIn)public onlyAvailable{
+        require(sender == owner);
         amountIn = _amountIn;
     }
 
-    function setAmountOut(uint8 _amountOut)public onlyAvailable{
+    function setAmountOut(address sender, uint8 _amountOut)public onlyAvailable{
+        require(sender == owner);
         amountOut = _amountOut;
     }
 
@@ -47,16 +42,28 @@ contract Offer{
         return owner;
     }
 
+    function closeOffer() public {
+        isAvailable = false;
+    }
+
+    function getAvailability() public view returns(bool){
+        return isAvailable;
+    }
+
 }
 
     interface OfferInterface{
     
-    function setAmountIn(uint8 _amountIn) external;
+    function setAmountIn(address sender, uint8 _amountIn) external;
 
-    function setAmountOut(uint8 _amountOut) external;
+    function setAmountOut(address sender, uint8 _amountOut) external;
+
+    function getAvailability() external view returns(bool);
 
     function getInfo() external view returns(uint8[4] memory);
 
     function getOwner() external view returns(address);
+
+    function closeOffer() external;
 
 }
