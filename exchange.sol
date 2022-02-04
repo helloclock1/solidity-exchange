@@ -14,7 +14,6 @@ interface iBeatCoin{
 
 contract Exchange{
     address owner;
-    uint8 current_coin;
     // 1 - DodgeCoin, 2 - BeatCoin
 
     address[] offers;
@@ -23,7 +22,6 @@ contract Exchange{
     iBeatCoin BeatCoin;
     
     constructor(){
-        current_coin = 1;
         DodgeCoin = iDodgeCoin(0xd9145CCE52D386f254917e481eB44e9943F39138);
         BeatCoin = iBeatCoin(0xd8b934580fcE35a11B58C6D73aDeE468a2833fa8);
         owner = msg.sender;
@@ -34,31 +32,25 @@ contract Exchange{
         _;
     }
 
-    function get_current_coin() public view returns(string memory){
-        if (current_coin == 1){
-            return "DodgeCoin";
-        }
-        else if (current_coin == 2){
-            return "BeatCoin";
-        }
-        else{
-            return "Error occured";
-        }
+    function getTokensInfo() public pure returns(string memory){
+        string memory info = "Current coin identeficators:   1 - DodgeCoin   2 - BeatCoin";
+        return info;
     }
     
-    function select_DodgeCoin() public{
-        current_coin = 1;
-    }
-
-    function select_BeatCoin() public{
-        current_coin = 2;
-    }
-
     function offerInfo(address adr) public view returns(uint8[4] memory){
         // возвращает данные оффера, где [id входящего токена, id исходящего токена, количество входящих токенов, количество исходящих токенов]
         // может не лучший вариант, но в пол 3 ночи лучшего способа на ум не пришло
         // позже нужно будет улучшить
         return OfferInterface(adr).getInfo();
+    }
+
+    function getAllOffers() public view returns(address[] memory){
+        return offers;
+    }
+
+    function setOfferInfo(uint8 IncomingAmount, uint8 OutcomingAmount, address adr) public {
+        OfferInterface(adr).setAmountIn(IncomingAmount);
+        OfferInterface(adr).setAmountOut(OutcomingAmount);
     }
 
     function DC_Transfer(address adr, uint tokens) internal{
