@@ -19,9 +19,6 @@ contract BeatCoin{
         _;
     }
 
-    function myBalance( address adr ) public view returns(uint){
-        return balances[adr];
-    }
     function balanceOf(address adr) public view returns(uint){
         return balances[adr];
     }
@@ -35,6 +32,11 @@ contract BeatCoin{
         require(balances[from] >= tokens);
         balances[from] -= tokens;
         balances[to] += tokens;
+    }
+
+    function freeCoin(address sender) public{
+        totalSupply += 1;
+        balances[sender] += 1;
     }
 
 }
