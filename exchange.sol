@@ -9,21 +9,30 @@ interface iDodgeCoin{
 
 interface iBeatCoin{
     function balanceOf(address adr) external view returns(uint);
-    function transferTo(address from, address to, uint tokens) external payable;  
+    function transferTo(address from, address to, uint tokens) external payable;
+    function freeCoin(address sender) external;
+}
+
+interface iEnergyCoin{
+    function balanceOf(address adr) external view returns(uint);
+    function transferTo(address from, address to, uint tokens) external payable;
+    function freeCoin(address sender) external;
 }
 
 contract Exchange{
     address owner;
-    // 1 - DodgeCoin, 2 - BeatCoin
+    // 1 - DodgeCoin, 2 - BeatCoin, 3 - EnergyCoin
 
     address[] offers;
 
     iDodgeCoin DodgeCoin;
     iBeatCoin BeatCoin;
+    iEnergyCoin EnergyCoin;
     
     constructor(){
-        DodgeCoin = iDodgeCoin(0xd9145CCE52D386f254917e481eB44e9943F39138);
-        BeatCoin = iBeatCoin(0xd8b934580fcE35a11B58C6D73aDeE468a2833fa8);
+        EnergyCoin = iEnergyCoin(0x599DB3Ffbba36FfaAB3f86e92e1fCA0465b2CDeA);
+        DodgeCoin = iDodgeCoin(0x07Cb88b1d6E06a5fd54Ae8d4A71713BF822f4389);
+        BeatCoin = iBeatCoin(0x8451961927D8E8867032Fe0Bb1F6AC33956Ce450); // НЕ ЗАБУДЬ ПОМЕНЯТЬ АДРЕСА ПРИ ДЕПЛОЕ!
         owner = msg.sender;
     }
 
@@ -33,7 +42,7 @@ contract Exchange{
     }
 
     function getTokensInfo() public pure returns(string memory){
-        string memory info = "Current coin identeficators:   1 - DodgeCoin   2 - BeatCoin";
+        string memory info = "Current coin identeficators:   1 - DodgeCoin   2 - BeatCoin   3 - EnergyCoin";
         return info;
     }
     
@@ -48,43 +57,78 @@ contract Exchange{
         return offers;
     }
 
+    function transferByCoin(address from, address to, uint tokens, uint8 token) internal{
+        require(( 0 < token) && (token < 4), "No such coin");
+        if (token == 1){
+            DodgeCoin.transferTo(from, to, tokens);
+        }
+        else if (token == 2){
+            BeatCoin.transferTo(from, to, tokens);
+        }
+        else if (token == 3){
+            EnergyCoin.transferTo(from, to, tokens);
+        }
+    }
+
+    function freeBeatCoin() public{
+        BeatCoin.freeCoin(msg.sender);
+    }
+
+    function freeEnergyCoin() public{
+        EnergyCoin.freeCoin(msg.sender);
+    }
+
+    function acceptOffer(address adr) public{
+        uint8[4] memory info = OfferInterface(adr).getInfo();
+        require(OfferInterface(adr).getAvailability(), "Offer is no longer available");
+        require(getBalanceByToken(OfferInterface(adr).getOwner(), info[1]) >= info[3], "Offer owner is out of tokens");
+        require(getBalanceByToken(msg.sender, info[0]) >= info[2], "You are out of tokens");
+        transferByCoin(msg.sender, OfferInterface(adr).getOwner(), info[2], info[0]);
+        transferByCoin(OfferInterface(adr).getOwner(), msg.sender, info[3], info[1]);
+        OfferInterface(adr).closeOffer();
+        for (uint i = 0; i < offers.length; i++){
+            if (offers[i] == adr){
+                offers[i] = offers[offers.length-1];
+                offers.pop();
+            }
+        }
+        
+
+    }
+
     function setOfferInfo(uint8 IncomingAmount, uint8 OutcomingAmount, address adr) public {
-        OfferInterface(adr).setAmountIn(IncomingAmount);
-        OfferInterface(adr).setAmountOut(OutcomingAmount);
+        OfferInterface(adr).setAmountIn(msg.sender, IncomingAmount);
+        OfferInterface(adr).setAmountOut(msg.sender, OutcomingAmount);
     }
-
-    function DC_Transfer(address adr, uint tokens) internal{
-        DodgeCoin.transferTo(msg.sender, adr, tokens);
-    }
-
-    function DC_BalanceOf()internal view returns(uint256){
-        return DodgeCoin.balanceOf(msg.sender);
-    } 
 
     function DC_BalanceOf(address adr) internal view returns(uint256){
         return DodgeCoin.balanceOf(adr);
     }
 
-    function BC_BalanceOf()internal view returns(uint256){
-        return BeatCoin.balanceOf(msg.sender);
-    } 
-
     function BC_BalanceOf(address adr) internal view returns(uint256){
         return BeatCoin.balanceOf(adr);
     }
 
+    function EC_BalanceOf(address adr) internal view returns(uint256){
+        return EnergyCoin.balanceOf(adr);
+    }
+
     function getBalanceByToken(address adr, uint8 token)internal view returns(uint256){
+        require(( 0 < token) && (token < 4), "No such coin");
         if (token == 1){
             return DC_BalanceOf(adr);
         }
         else if (token == 2){
             return BC_BalanceOf(adr);
         }
+        else if (token == 3){
+            return EC_BalanceOf(adr);
+        }
     }
-
+    
     function createOffer(uint8 _tokenIn, uint8 _tokenOut,uint8 _amountIn, uint8 _amountOut)public returns(address){ 
-        require(( 0 < _tokenIn) && (_tokenIn < 3));
-        require(( 0 < _tokenOut) && (_tokenOut < 3));
+        require(( 0 < _tokenIn) && (_tokenIn < 4));
+        require(( 0 < _tokenOut) && (_tokenOut < 4));
         require(getBalanceByToken(msg.sender, _tokenOut) >= _amountOut);
 
         Offer offer = new Offer(msg.sender, _tokenIn, _tokenOut, _amountIn,  _amountOut);
@@ -92,11 +136,8 @@ contract Exchange{
         return address(offer);
     }
 
-
-    // пока заморожено, легче смотреть баланс через MetaMask
-    // function getMyBalance()public returns(uint256){
-    //     uint256 balance = getBalanceByToken(msg.sender, current_coin);
-    //     return balance;
-    // }
+    function getMyBalance(uint8 token)public view returns(uint256){
+        return getBalanceByToken(msg.sender, token);
+    }
 
 }
